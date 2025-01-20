@@ -1,10 +1,15 @@
 from langchain.vectorstores import Chroma
-from langchain.embeddings import HuggingFaceEmbeddings
-
+from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.document_loaders import TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from dotenv import load_dotenv
+import os
 
-data = '전문'
+# 환경 변수 로드
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+data = '인물특성'
 
 def load_and_split_txt(txt_path, chunk_size=100, chunk_overlap=0):
     # TXT 파일 로드
@@ -26,7 +31,7 @@ def load_and_split_txt(txt_path, chunk_size=100, chunk_overlap=0):
 texts = load_and_split_txt(f'data/{data}.txt')
 
 # OpenAI 임베딩 초기화
-embeddings = HuggingFaceEmbeddings(model_name="jhgan/ko-sroberta-multitask")
+embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 
 db = Chroma.from_documents(documents=texts, embedding=embeddings, persist_directory= f"./data/embedding/{data}_chroma_db")
 
