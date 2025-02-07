@@ -19,7 +19,7 @@ JSON_FILE_PATH = "chat_history.json"
 class ChatBot:
     def __init__(self, character_name="김첨지", book_title="운수좋은날"):
         # 2) DB 경로 설정
-        base_path = f"C:/storymate/{book_title}/data/embedding"
+        base_path = f"{book_title}/data/embedding"
         self.character_name = character_name
         # 3) DB & 리트리버 초기화
         self.q_db = initialize_chroma_db(f"{base_path}/예상질문_chroma_db")

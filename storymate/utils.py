@@ -43,7 +43,7 @@ def initialize_retriever(db, k: int = 3):
         search_kwargs={"score_threshold": 0.8}
     )
 
-def initialize_llm(model_name: str = "gpt-3.5-turbo", temperature: float = 0):
+def initialize_llm(model_name: str = "gpt-4o", temperature: float = 0):
     """
     ChatOpenAI 모델을 초기화하고 반환합니다.
     """
