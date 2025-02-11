@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from chatbot import ChatBot
+from chatbot_sql import ChatBot
 
 app = Flask(__name__)
 
@@ -15,6 +15,10 @@ def chat():
     print(f"📥 요청 받음 - 세션: {session_id}, 캐릭터: {character_name}, 질문: {query}")
 
     bot = ChatBot(character_name=character_name)
+
+    # 기존 대화 기록 불러오기 (MariaDB에서)
+    bot.load_chat_history(session_id=session_id)
+
     response_text = bot.get_answer(user_query=query, session_id=session_id)
 
     print(f"🤖 챗봇 응답 - {character_name}: {response_text}")
