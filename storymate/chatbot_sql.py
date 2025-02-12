@@ -1,12 +1,25 @@
+import os
 import pymysql
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
+
+# 환경 변수 가져오기
+DB_HOST = os.getenv("DB_HOST")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+DB_CHARSET = os.getenv("DB_CHARSET", "utf8mb4")  # 기본값 utf8mb4
+
 # MariaDB 연결 함수
 def get_db_connection():
     return pymysql.connect(
-        host="localhost",
-        user="root",
-        password="1234",  # HeidiSQL에서 설정한 MariaDB 비밀번호 입력
-        database="chatdb",
-        charset="utf8mb4",
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+        charset=DB_CHARSET,
         cursorclass=pymysql.cursors.DictCursor
     )
 
@@ -14,8 +27,6 @@ def get_db_connection():
 
 
 
-import os
-from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -25,7 +36,6 @@ from utils import (
 )
 from template import get_template
 
-load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
