@@ -11,6 +11,7 @@ COPY template.py .
 COPY chatbot_sql.py .
 COPY 운수좋은날/ /app/운수좋은날
 COPY 인어공주/ /app/인어공주
+COPY quiz.py .
 
 
 # db환경변수

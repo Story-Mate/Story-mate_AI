@@ -34,7 +34,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from utils import (
     initialize_chroma_db, fetch_data, initialize_retriever, initialize_llm
 )
-from template import get_template
+from template import get_character_template
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -44,7 +44,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 class ChatBot:
 
     # ✅ ChatBot 클래스 초기화
-    def __init__(self, character_name="김첨지", book_title="운수좋은날"):
+    def __init__(self, character_name, book_title):
         # 2) DB 경로 설정
         base_path = f"{book_title}/data/embedding"
         self.character_name = character_name
@@ -60,7 +60,7 @@ class ChatBot:
         self.c_retriever = initialize_retriever(self.c_db)
 
         # 4) 템플릿 & LLM
-        self.prompt_template = get_template(character_name)
+        self.prompt_template = get_character_template(character_name)
         self.llm = initialize_llm(model_name="gpt-4o")
 
         # 5) 체인 결합 (PromptTemplate → LLM → StrOutputParser)

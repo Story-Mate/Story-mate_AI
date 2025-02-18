@@ -24,6 +24,11 @@ def fetch_data(retriever, query: str, max_docs: int = 3) -> list:
     retriever.invoke(query) 결과에서 최대 max_docs개의 문서만 추출,
     각 문서의 page_content를 리스트로 반환
     """
+
+    if not isinstance(query, str):
+        print(f"🚨 오류 발생! query 타입: {type(query)}, 값: {query}")
+        return []
+    
     docs = retriever.invoke(query)
     results = []
     for i, doc in enumerate(docs):
@@ -52,11 +57,3 @@ def initialize_llm(model_name: str = "gpt-4o", temperature: float = 0):
         temperature=temperature,
         openai_api_key=OPENAI_API_KEY
     )
-
-# 세션 ID를 기반으로 세션 기록을 가져오는 함수
-def get_session_history(session_ids, store):
-    print(f"[대화 세션ID]: {session_ids}")
-    if session_ids not in store:  # 세션 ID가 store에 없는 경우
-        # 새로운 ChatMessageHistory 객체를 생성하여 store에 저장
-        store[session_ids] = ChatMessageHistory()
-    return store[session_ids]  # 해당 세션 ID에 대한 세션 기록 반환
