@@ -1,27 +1,30 @@
 import os
 import json
 from dotenv import load_dotenv
+
+# langchain_core나 utils 등은 기존 프로젝트 구조를 따른다고 가정
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 # 모듈에서 필요한 함수들을 임포트
 from utils import (
-    initialize_chroma_db, fetch_data, initialize_retriever, initialize_llm, get_session_history
+    initialize_chroma_db, fetch_data, initialize_retriever, initialize_llm
 )
-from template import get_template
+from template import get_character_template
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# JSON 저장 파일 경로
-JSON_FILE_PATH = "chat_history.json"
 
 class ChatBot:
-    def __init__(self, character_name="김첨지", book_title="운수좋은날"):
-        # 2) DB 경로 설정
+    # ✅ ChatBot 클래스 초기화
+    def __init__(self, character_name, book_title):
+        # 1) DB(Chroma) 경로 설정
         base_path = f"{book_title}/data/embedding"
         self.character_name = character_name
-        # 3) DB & 리트리버 초기화
+        self.book_title = book_title
+
+        # 2) DB & 리트리버 초기화
         self.q_db = initialize_chroma_db(f"{base_path}/예상질문_chroma_db")
         self.e_db = initialize_chroma_db(f"{base_path}/인물평가_chroma_db")
         self.n_db = initialize_chroma_db(f"{base_path}/전문_chroma_db")
@@ -32,116 +35,95 @@ class ChatBot:
         self.n_retriever = initialize_retriever(self.n_db)
         self.c_retriever = initialize_retriever(self.c_db)
 
-        # 4) 템플릿 & LLM
-        self.prompt_template = get_template(character_name)
+        # 3) 템플릿 & LLM
+        self.prompt_template = get_character_template(book_title, character_name)
         self.llm = initialize_llm(model_name="gpt-4o")
 
-        # 5) 체인 결합 (PromptTemplate → LLM → StrOutputParser)
+        # 4) 체인 결합 (PromptTemplate → LLM → StrOutputParser)
         self.chain = self.prompt_template | self.llm | StrOutputParser()
 
-        # 6) 대화 기록 저장소
-        self.store = {}
+        # 5) JSON 저장/로드를 위한 준비
+        self.chat_history_file = "chat_history.json"
+        self.chat_data = self._load_chat_data()
 
-        # 7) JSON 파일에서 기존 대화 기록 불러오기
-        self.load_chat_history()
 
-    # ✅ JSON에서 대화 기록 불러오기
-    def load_chat_history(self):
+    # --------------------------------------
+    # JSON 기반 대화 기록 관리 함수들
+    # --------------------------------------
+    def _load_chat_data(self):
+        """JSON 파일에서 전체 대화 기록을 불러오는 내부 함수"""
+        if os.path.exists(self.chat_history_file):
+            with open(self.chat_history_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        else:
+            return {}
+
+    def _save_chat_data(self):
+        """JSON 파일에 전체 대화 기록을 저장하는 내부 함수"""
+        with open(self.chat_history_file, "w", encoding="utf-8") as f:
+            json.dump(self.chat_data, f, indent=4, ensure_ascii=False)
+
+    def load_chat_history(self, session_id):
         """
-        JSON 파일에서 기존 대화 기록을 불러와 store에 저장
+        특정 session_id의 대화 기록을 JSON에서 불러옴
         """
-        if not os.path.exists(JSON_FILE_PATH):
-            return  # 파일이 없으면 아무것도 안 함
+        return self.chat_data.get(session_id, [])
 
-        with open(JSON_FILE_PATH, "r", encoding="utf-8") as f:
-            chat_data = json.load(f)
-
-        # JSON 데이터를 store에 복원
-        for session_id, messages in chat_data.items():
-            self.store[session_id] = messages
-
-        print("✅ 대화 기록이 JSON에서 store로 복원되었습니다.")
-
-    # ✅ JSON에 대화 기록 저장
-    def save_chat_history(self):
+    def save_chat_history(self, session_id, role, content):
         """
-        store의 대화 기록을 JSON 파일에 저장
+        session_id에 해당하는 대화 기록을 JSON 파일에 저장
         """
-        with open(JSON_FILE_PATH, "w", encoding="utf-8") as f:
-            json.dump(self.store, f, ensure_ascii=False, indent=4)
+        if session_id not in self.chat_data:
+            self.chat_data[session_id] = []
+        self.chat_data[session_id].append({"role": role, "content": content})
+        self._save_chat_data()
 
-        print("✅ 대화 기록이 JSON 파일에 저장되었습니다.")
+    def add_conversation(self, session_id, user_query, response):
+        """
+        새로운 대화를 self.chat_data에 저장
+        """
+        self.save_chat_history(session_id, "human", user_query)
+        self.save_chat_history(session_id, "ai", response)
 
-    # ✅ 대화 내용을 요약하는 함수
+
+    # ✅ 대화 요약
     def summarize_history(self, session_id):
         """
-        특정 세션의 대화 기록을 JSON 파일에서 불러와 요약하는 함수
+        특정 세션의 대화 기록을 불러와 요약
         """
-        # JSON에서 해당 세션의 대화 기록 불러오기
-        if not os.path.exists(JSON_FILE_PATH):
-            return "이전 대화 기록이 없습니다."
-
-        with open(JSON_FILE_PATH, "r", encoding="utf-8") as f:
-            chat_data = json.load(f)
-
-        history = chat_data.get(session_id, [])
+        history = self.load_chat_history(session_id)
 
         if not history:
             return "이전 대화 기록이 없습니다."
 
-        # 요약할 텍스트 변환 (role을 붙여서 정리)
+        # 요약할 텍스트 변환
         conversation_text = "\n".join(
-            [f"{'사용자' if msg['role'] == 'human' else self.character_name}: {msg['content']}" for msg in history]
+            [f"{'사용자' if msg['role'] == 'human' else self.character_name}: {msg['content']}" 
+             for msg in history]
         )
 
-        # 요약 프롬프트 설정
-        summary_prompt = (
-        """
+        # 요약 프롬프트
+        summary_prompt = """
         [이전 대화 요약]
         - 마크다운 형식으로 작성합니다.
-        - 사용자의 정보와 대화 주제를 강조하여 chat_history를 요약합니다.
+        - 사용자의 정보와 대화 주제를 강조하여 chat_history를 요약하세요.
 
-        chat_history : {conversation_text}"""
-        )
+        chat_history : {conversation_text}
+        """
 
-        # 요약 실행
         summary_chain = ChatPromptTemplate.from_template(summary_prompt) | self.llm | StrOutputParser()
         summary = summary_chain.invoke({"conversation_text": conversation_text})
+        return summary
 
-        print(f"[대화 요약]: {summary}")
-        return summary 
-
-    # ✅ 세션 ID 기반으로 대화 기록 불러오기
-    def get_session_history(self, session_id):
-        """
-        특정 session_id에 대한 대화 기록을 반환 (없으면 새로 생성)
-        """
-        print(f"[대화 세션ID]: {session_id}")
-
-        if session_id not in self.store:  # 세션 ID가 store에 없는 경우
-            self.store[session_id] = []
-
-        return self.store[session_id]
-
-    # ✅ 새로운 대화 추가
-    def add_conversation(self, session_id, user_query, response):
-        """
-        새로운 대화를 store에 추가하고 JSON에 저장
-        """
-        if session_id not in self.store:
-            self.store[session_id] = []
-
-        self.store[session_id].append({"role": "human", "content": user_query})
-        self.store[session_id].append({"role": "ai", "content": response})
-
-        # 변경된 대화 기록을 JSON에 저장
-        self.save_chat_history()
 
     # ✅ 최종 답변 생성 함수
     def get_answer(self, session_id: str, user_query: str) -> str:
         """
-        세션 ID 기반으로 DB 검색 후, 캐릭터 템플릿과 LLM으로 답변 생성
+        세션 ID 기반으로 검색 후 캐릭터 템플릿과 LLM으로 답변 생성
         """
+        if not isinstance(user_query, str) or not user_query.strip():
+            return "오류: 질문이 없습니다."
+
         # 각 DB에서 context를 검색
         question_context  = fetch_data(self.q_retriever, user_query)
         evaluate_context  = fetch_data(self.e_retriever, user_query)
@@ -161,7 +143,6 @@ class ChatBot:
             "chat_history": summarized_history,
         }
 
-        # 체인 실행
         response = self.chain.invoke(input_data)
 
         # 대화 저장
