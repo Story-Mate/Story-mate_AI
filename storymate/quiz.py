@@ -6,7 +6,7 @@ from utils import (
     initialize_chroma_db, fetch_data, initialize_retriever, initialize_llm
 )
 
-def get_quiz_question(character_name: str, quiz_type: str):
+def get_quiz_question(book_title: str, character_name: str, quiz_type: str):
     """
     특정 캐릭터의 퀴즈를 가져오는 함수. 
     퀴즈 질문(문제)만 문자열로 반환합니다.
@@ -19,7 +19,7 @@ def get_quiz_question(character_name: str, quiz_type: str):
     - 퀴즈의 질문(문제)만 문자열로 반환
     """
     # 캐릭터의 퀴즈 데이터 가져오기
-    character_quiz = character_quizzes.get(character_name)
+    character_quiz = character_quizzes[book_title][character_name]
 
     # 캐릭터 정보가 없을 경우 예외처리
     if not character_quiz:
@@ -50,7 +50,7 @@ def evaluate_quiz_answer(book_title: str, character_name: str, quiz_type: str, u
     """
 
     # ✅ 캐릭터의 퀴즈 데이터 가져오기
-    character_quiz = character_quizzes.get(character_name)
+    character_quiz = character_quizzes[book_title][character_name]
 
     if not character_quiz:
         return json.dumps({"error": f"'{character_name}'에 대한 퀴즈 데이터를 찾을 수 없습니다."}, ensure_ascii=False)
@@ -77,7 +77,7 @@ def evaluate_quiz_answer(book_title: str, character_name: str, quiz_type: str, u
     # ✅ 서술형(논술형) 문제는 LLM을 사용하여 평가
     elif quiz_type == "essay":
         # 1️⃣ 캐릭터 프롬프트 가져오기
-        character_prompt = character_prompts.get(character_name, "캐릭터 정보를 찾을 수 없습니다.")
+        character_prompt = character_prompts[book_title][character_name]
 
         # 2️⃣ LLM 프롬프트 생성
         prompt_template = ChatPromptTemplate.from_messages([
@@ -88,9 +88,9 @@ def evaluate_quiz_answer(book_title: str, character_name: str, quiz_type: str, u
             [평가 지침]
             1. **당신은 {character_name}**입니다. {character_name}의 입장에서 성격과 특성을 고려해 답변하세요.
             2. 사용자의 답변이 정답에 어느 정도 부합하는지 스스로 분석하여 아래 3가지 중 하나로 판단:
-            - "O": 설명이 더 필요없을 정도로 완벽히 맞음
-            - "C": **어느 정도 맞지만 부족한 부분이 있음. 설명이 조금이라도 필요함**
-            - "X": 완전히 틀림
+            - "O": 맞음.
+            - "C": 부분적으로 맞지만 보충 설명이 필요함
+            - "X": 틀림.
             3. 반드시 한 가지로만 판별하세요.
             4. 왜 그런 판정을 했는지, 어떻게 보충/설명해야 하는지 서술해 주세요.
 
@@ -146,7 +146,7 @@ def evaluate_quiz_answer(book_title: str, character_name: str, quiz_type: str, u
 
         # ✅ LLM으로부터 답변 받기
         response = json.loads(chain.invoke(input_data))
-
+        print(prompt_template.format(**input_data))
         response["quiz_type"] = quiz_type
 
         # 에세이(서술형)는 문자열(LLM 응답)만 반환

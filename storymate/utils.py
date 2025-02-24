@@ -19,7 +19,7 @@ def initialize_chroma_db(persist_directory: str) -> Chroma:
     )
 
 
-def fetch_data(retriever, query: str, max_docs: int = 3) -> list:
+def fetch_data(retriever, query: str, max_docs: int = 2) -> list:
     """
     retriever.invoke(query) 결과에서 최대 max_docs개의 문서만 추출,
     각 문서의 page_content를 리스트로 반환
@@ -45,7 +45,7 @@ def initialize_retriever(db, k: int = 3):
     """
     return db.as_retriever(
         search_type="similarity_score_threshold",
-        search_kwargs={"score_threshold": 0.8}
+        search_kwargs={"score_threshold": 0.7}
     )
 
 def initialize_llm(model_name: str = "gpt-4o", temperature: float = 0):

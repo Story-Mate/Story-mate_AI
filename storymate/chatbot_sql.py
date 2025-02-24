@@ -24,9 +24,6 @@ def get_db_connection():
     )
 
 
-
-
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -46,8 +43,9 @@ class ChatBot:
     # ✅ ChatBot 클래스 초기화
     def __init__(self, character_name, book_title):
         # 2) DB 경로 설정
-        base_path = f"{book_title}/data/embedding"
+        base_path = f"{book_title}/{character_name}/data/embedding"
         self.character_name = character_name
+        self.book_title = book_title
         # 3) DB & 리트리버 초기화
         self.q_db = initialize_chroma_db(f"{base_path}/예상질문_chroma_db")
         self.e_db = initialize_chroma_db(f"{base_path}/인물평가_chroma_db")
@@ -60,7 +58,7 @@ class ChatBot:
         self.c_retriever = initialize_retriever(self.c_db)
 
         # 4) 템플릿 & LLM
-        self.prompt_template = get_character_template(character_name)
+        self.prompt_template = get_character_template(book_title, character_name)
         self.llm = initialize_llm(model_name="gpt-4o")
 
         # 5) 체인 결합 (PromptTemplate → LLM → StrOutputParser)

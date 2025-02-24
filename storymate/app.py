@@ -62,9 +62,9 @@ def quiz_question():
     """
     data = request.get_json()
     character_name = data.get("character_name")
+    book_title = data.get("book_title")
     quiz_type = data.get("quiz_type")
-
-    question = get_quiz_question(character_name, quiz_type)
+    question = get_quiz_question(book_title=book_title, character_name=character_name, quiz_type=quiz_type)
 
     # 에러 문자열(예: "'김첨지'에 대한 퀴즈 데이터를 찾을 수 없습니다.") 처리
     if "찾을 수 없습니다" in question or "존재하지 않습니다" in question:
@@ -110,7 +110,7 @@ def evaluate_quiz():
     quiz_type = data.get("quiz_type")
     user_answer = data.get("user_answer")
 
-    result = evaluate_quiz_answer(book_title, character_name, quiz_type, user_answer)
+    result = evaluate_quiz_answer(book_title=book_title, character_name=character_name, quiz_type=quiz_type, user_answer=user_answer)
     # result가 "서술형"이면 dict, "OX/객관식"이면 str(= JSON), 에러여도 str(=JSON)일 확률 높음
 
     # (A) 만약 이미 파이썬 딕셔너리라면 그대로 반환

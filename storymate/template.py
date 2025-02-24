@@ -1,14 +1,14 @@
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from character import character_prompts  # 캐릭터별 설명 불러오기
 
-def get_character_template(character_name: str) -> ChatPromptTemplate:
+def get_character_template(book_title: str, character_name: str) -> ChatPromptTemplate:
     """
     특정 캐릭터에 맞는 대화 템플릿을 생성하는 함수.
     - 캐릭터의 감정, 말투, 시대적 배경을 고려한 응답을 생성.
     """
-
+    
     # ✅ 캐릭터 기본 설명 가져오기
-    character_prompt = character_prompts.get(character_name, "캐릭터 정보를 찾을 수 없습니다.")
+    character_prompt = character_prompts[book_title][character_name]
 
     # ✅ 캐릭터별 챗봇 대화 템플릿 생성
     prompt = ChatPromptTemplate.from_messages([
@@ -43,7 +43,7 @@ def get_character_template(character_name: str) -> ChatPromptTemplate:
             - ...
             3) {character_name}의 심리·말투·시대 배경 정리:
             - ...
-            4) 대화 톤과 200자 분량 점검:
+            4) 대화 톤과 200자 분량 점검(이모티콘 제거):
             - ...
             5) 답변 초안 작성 및 수정:
 
